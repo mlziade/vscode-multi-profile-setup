@@ -1,6 +1,6 @@
 # VS Code Multiple Profile Setup Guide
 
-A complete guide to set up separate VS Code installations with different GitHub accounts on Windows.
+A guide to set up separate VS Code installations with different GitHub accounts on Windows (like work vs personal accounts, for example).
 
 ## Table of Contents
 - [Overview](#overview)
@@ -127,31 +127,27 @@ code --user-data-dir "C:\vscode\personal\data" %*
 
 ## Creating Custom Icons
 
+### Getting Official VS Code Icons
+
+**Download official VS Code icons in PNG format:**
+- Visit: https://code.visualstudio.com/brand
+- Microsoft provides the official VS Code logo and brand assets
+
 ### Converting PNG to ICO
 
-**Option 1: Online Converter (Easiest)**
-1. Go to https://convertio.co/png-ico/
+**Online Converter (Easiest)**
+1. Go to any conversion website
 2. Upload your PNG file
-3. Convert and download
+3. Convert to ico extensio and download it
 
-**Option 2: Using IrfanView (Free Software)**
-1. Download from https://www.irfanview.com/
-2. Install with Plugins
-3. Open PNG in IrfanView
-4. Image → Resize → 256x256
-5. File → Save As → Choose "ICO - Windows Icon"
-
-**Recommendations:**
-- Start with square PNG (256x256 minimum)
-- Simple designs work best
-- Transparent backgrounds are ideal
-- Include multiple sizes (16, 32, 48, 256)
 
 ### Example Icon Locations
 ```
-C:\vscode\vscode.ico          (Work icon)
-C:\vscode\vscode-alt.ico      (Personal icon)
+C:\vscode\vscode.ico          (Work icon - e.g., official stable icon)
+C:\vscode\vscode-alt.ico      (Personal icon - e.g., insiders icon or custom)
 ```
+
+**Tip:** Use the official VS Code stable icon for one profile and the Insiders icon (or a custom color variation) for the other to easily distinguish them visually!
 
 ---
 
@@ -159,87 +155,109 @@ C:\vscode\vscode-alt.ico      (Personal icon)
 
 This adds "Open with VS Code - Work/Personal" to right-click menus.
 
-### Method 1: Using .reg File (Recommended)
+### IMPORTANT: Find Your VS Code Installation Path First
 
-**Create file: `vscode-context-menu.reg`**
+VS Code can be installed in two different locations. You need to find which one you have:
 
-```reg
-Windows Registry Editor Version 5.00
-
-; Work Profile - Right-click on folder
-[HKEY_CLASSES_ROOT\Directory\shell\VSCodeWork]
-@="Open with VS Code - Work"
-"Icon"="C:\\vscode\\vscode.ico"
-
-[HKEY_CLASSES_ROOT\Directory\shell\VSCodeWork\command]
-@="\"C:\\Program Files\\Microsoft VS Code\\Code.exe\" --user-data-dir \"C:\\vscode\\work\\data\" \"%1\""
-
-; Personal Profile - Right-click on folder
-[HKEY_CLASSES_ROOT\Directory\shell\VSCodePersonal]
-@="Open with VS Code - Personal"
-"Icon"="C:\\vscode\\vscode-alt.ico"
-
-[HKEY_CLASSES_ROOT\Directory\shell\VSCodePersonal\command]
-@="\"C:\\Program Files\\Microsoft VS Code\\Code.exe\" --user-data-dir \"C:\\vscode\\personal\\data\" \"%1\""
-
-; Work Profile - Right-click inside folder
-[HKEY_CLASSES_ROOT\Directory\Background\shell\VSCodeWork]
-@="Open with VS Code - Work"
-"Icon"="C:\\vscode\\vscode.ico"
-
-[HKEY_CLASSES_ROOT\Directory\Background\shell\VSCodeWork\command]
-@="\"C:\\Program Files\\Microsoft VS Code\\Code.exe\" --user-data-dir \"C:\\vscode\\work\\data\" \"%V\""
-
-; Personal Profile - Right-click inside folder
-[HKEY_CLASSES_ROOT\Directory\Background\shell\VSCodePersonal]
-@="Open with VS Code - Personal"
-"Icon"="C:\\vscode\\vscode-alt.ico"
-
-[HKEY_CLASSES_ROOT\Directory\Background\shell\VSCodePersonal\command]
-@="\"C:\\Program Files\\Microsoft VS Code\\Code.exe\" --user-data-dir \"C:\\vscode\\personal\\data\" \"%V\""
+**Run this in PowerShell:**
+```powershell
+Get-Command code | Select-Object Source
 ```
 
-**To apply:**
-1. Save the file with `.reg` extension
-2. Double-click the file
-3. Click **Yes** when prompted
-4. Refresh File Explorer (F5)
+This will show you where VS Code is installed. Common locations:
+- **User Install**: `C:\Users\YOUR_USERNAME\AppData\Local\Programs\Microsoft VS Code\Code.exe`
+- **System Install**: `C:\Program Files\Microsoft VS Code\Code.exe`
 
-### Method 2: Using PowerShell Commands
+**Note the path** - you'll need it for the registry entries below!
 
-Run **PowerShell as Administrator**:
+### Method: Using PowerShell Commands
+
+Run **PowerShell as Administrator**.
+
+**First, find your VS Code path:**
+```powershell
+Get-Command code | Select-Object Source
+```
+
+**Then use the appropriate commands below:**
+
+---
+
+**If VS Code is in `AppData\Local` (User Install):**
 
 ```powershell
 # Create HKCR drive
 New-PSDrive -Name HKCR -PSProvider Registry -Root HKEY_CLASSES_ROOT
+
+# Replace YOUR_USERNAME with your actual Windows username
+$vscPath = "C:\Users\YOUR_USERNAME\AppData\Local\Programs\Microsoft VS Code\Code.exe"
 
 # Work Profile - Folder
 New-Item -Path "HKCR:\Directory\shell\VSCodeWork" -Force | Out-Null
 Set-ItemProperty -Path "HKCR:\Directory\shell\VSCodeWork" -Name "(Default)" -Value "Open with VS Code - Work"
 Set-ItemProperty -Path "HKCR:\Directory\shell\VSCodeWork" -Name "Icon" -Value "C:\vscode\vscode.ico"
 New-Item -Path "HKCR:\Directory\shell\VSCodeWork\command" -Force | Out-Null
-Set-ItemProperty -Path "HKCR:\Directory\shell\VSCodeWork\command" -Name "(Default)" -Value '"C:\Program Files\Microsoft VS Code\Code.exe" --user-data-dir "C:\vscode\work\data" "%1"'
+Set-ItemProperty -Path "HKCR:\Directory\shell\VSCodeWork\command" -Name "(Default)" -Value "`"$vscPath`" --user-data-dir `"C:\vscode\work\data`" `"%1`""
 
 # Personal Profile - Folder
 New-Item -Path "HKCR:\Directory\shell\VSCodePersonal" -Force | Out-Null
 Set-ItemProperty -Path "HKCR:\Directory\shell\VSCodePersonal" -Name "(Default)" -Value "Open with VS Code - Personal"
 Set-ItemProperty -Path "HKCR:\Directory\shell\VSCodePersonal" -Name "Icon" -Value "C:\vscode\vscode-alt.ico"
 New-Item -Path "HKCR:\Directory\shell\VSCodePersonal\command" -Force | Out-Null
-Set-ItemProperty -Path "HKCR:\Directory\shell\VSCodePersonal\command" -Name "(Default)" -Value '"C:\Program Files\Microsoft VS Code\Code.exe" --user-data-dir "C:\vscode\personal\data" "%1"'
+Set-ItemProperty -Path "HKCR:\Directory\shell\VSCodePersonal\command" -Name "(Default)" -Value "`"$vscPath`" --user-data-dir `"C:\vscode\personal\data`" `"%1`""
 
 # Work Profile - Background
 New-Item -Path "HKCR:\Directory\Background\shell\VSCodeWork" -Force | Out-Null
 Set-ItemProperty -Path "HKCR:\Directory\Background\shell\VSCodeWork" -Name "(Default)" -Value "Open with VS Code - Work"
 Set-ItemProperty -Path "HKCR:\Directory\Background\shell\VSCodeWork" -Name "Icon" -Value "C:\vscode\vscode.ico"
 New-Item -Path "HKCR:\Directory\Background\shell\VSCodeWork\command" -Force | Out-Null
-Set-ItemProperty -Path "HKCR:\Directory\Background\shell\VSCodeWork\command" -Name "(Default)" -Value '"C:\Program Files\Microsoft VS Code\Code.exe" --user-data-dir "C:\vscode\work\data" "%V"'
+Set-ItemProperty -Path "HKCR:\Directory\Background\shell\VSCodeWork\command" -Name "(Default)" -Value "`"$vscPath`" --user-data-dir `"C:\vscode\work\data`" `"%V`""
 
 # Personal Profile - Background
 New-Item -Path "HKCR:\Directory\Background\shell\VSCodePersonal" -Force | Out-Null
 Set-ItemProperty -Path "HKCR:\Directory\Background\shell\VSCodePersonal" -Name "(Default)" -Value "Open with VS Code - Personal"
 Set-ItemProperty -Path "HKCR:\Directory\Background\shell\VSCodePersonal" -Name "Icon" -Value "C:\vscode\vscode-alt.ico"
 New-Item -Path "HKCR:\Directory\Background\shell\VSCodePersonal\command" -Force | Out-Null
-Set-ItemProperty -Path "HKCR:\Directory\Background\shell\VSCodePersonal\command" -Name "(Default)" -Value '"C:\Program Files\Microsoft VS Code\Code.exe" --user-data-dir "C:\vscode\personal\data" "%V"'
+Set-ItemProperty -Path "HKCR:\Directory\Background\shell\VSCodePersonal\command" -Name "(Default)" -Value "`"$vscPath`" --user-data-dir `"C:\vscode\personal\data`" `"%V`""
+```
+
+---
+
+**If VS Code is in `Program Files` (System Install):**
+
+```powershell
+# Create HKCR drive
+New-PSDrive -Name HKCR -PSProvider Registry -Root HKEY_CLASSES_ROOT
+
+$vscPath = "C:\Program Files\Microsoft VS Code\Code.exe"
+
+# Work Profile - Folder
+New-Item -Path "HKCR:\Directory\shell\VSCodeWork" -Force | Out-Null
+Set-ItemProperty -Path "HKCR:\Directory\shell\VSCodeWork" -Name "(Default)" -Value "Open with VS Code - Work"
+Set-ItemProperty -Path "HKCR:\Directory\shell\VSCodeWork" -Name "Icon" -Value "C:\vscode\vscode.ico"
+New-Item -Path "HKCR:\Directory\shell\VSCodeWork\command" -Force | Out-Null
+Set-ItemProperty -Path "HKCR:\Directory\shell\VSCodeWork\command" -Name "(Default)" -Value "`"$vscPath`" --user-data-dir `"C:\vscode\work\data`" `"%1`""
+
+# Personal Profile - Folder
+New-Item -Path "HKCR:\Directory\shell\VSCodePersonal" -Force | Out-Null
+Set-ItemProperty -Path "HKCR:\Directory\shell\VSCodePersonal" -Name "(Default)" -Value "Open with VS Code - Personal"
+Set-ItemProperty -Path "HKCR:\Directory\shell\VSCodePersonal" -Name "Icon" -Value "C:\vscode\vscode-alt.ico"
+New-Item -Path "HKCR:\Directory\shell\VSCodePersonal\command" -Force | Out-Null
+Set-ItemProperty -Path "HKCR:\Directory\shell\VSCodePersonal\command" -Name "(Default)" -Value "`"$vscPath`" --user-data-dir `"C:\vscode\personal\data`" `"%1`""
+
+# Work Profile - Background
+New-Item -Path "HKCR:\Directory\Background\shell\VSCodeWork" -Force | Out-Null
+Set-ItemProperty -Path "HKCR:\Directory\Background\shell\VSCodeWork" -Name "(Default)" -Value "Open with VS Code - Work"
+Set-ItemProperty -Path "HKCR:\Directory\Background\shell\VSCodeWork" -Name "Icon" -Value "C:\vscode\vscode.ico"
+New-Item -Path "HKCR:\Directory\Background\shell\VSCodeWork\command" -Force | Out-Null
+Set-ItemProperty -Path "HKCR:\Directory\Background\shell\VSCodeWork\command" -Name "(Default)" -Value "`"$vscPath`" --user-data-dir `"C:\vscode\work\data`" `"%V`""
+
+# Personal Profile - Background
+New-Item -Path "HKCR:\Directory\Background\shell\VSCodePersonal" -Force | Out-Null
+Set-ItemProperty -Path "HKCR:\Directory\Background\shell\VSCodePersonal" -Name "(Default)" -Value "Open with VS Code - Personal"
+Set-ItemProperty -Path "HKCR:\Directory\Background\shell\VSCodePersonal" -Name "Icon" -Value "C:\vscode\vscode-alt.ico"
+New-Item -Path "HKCR:\Directory\Background\shell\VSCodePersonal\command" -Force | Out-Null
+Set-ItemProperty -Path "HKCR:\Directory\Background\shell\VSCodePersonal\command" -Name "(Default)" -Value "`"$vscPath`" --user-data-dir `"C:\vscode\personal\data`" `"%V`""
 ```
 
 ### Updating Icons After Setup
@@ -317,6 +335,44 @@ Get-Command code | Select-Object Source
 
 Then update the registry entries with the correct path.
 
+### Context Menu Appears But Doesn't Work
+
+**This is usually because VS Code is installed in a different location than the registry expects.**
+
+**Diagnose the issue:**
+
+```powershell
+# Check where VS Code is actually installed
+Get-Command code | Select-Object Source
+
+# Check what the registry has
+New-PSDrive -Name HKCR -PSProvider Registry -Root HKEY_CLASSES_ROOT
+Get-ItemProperty "HKCR:\Directory\shell\VSCodeWork\command" | Select-Object '(default)'
+```
+
+**Common VS Code locations:**
+- User Install: `C:\Users\YOUR_USERNAME\AppData\Local\Programs\Microsoft VS Code\Code.exe`
+- System Install: `C:\Program Files\Microsoft VS Code\Code.exe`
+
+**Fix:**
+
+Once you know the correct path, update the registry entries:
+
+```powershell
+New-PSDrive -Name HKCR -PSProvider Registry -Root HKEY_CLASSES_ROOT
+
+# Replace with YOUR actual VS Code path
+$correctPath = "C:\Users\YOUR_USERNAME\AppData\Local\Programs\Microsoft VS Code\Code.exe"
+
+# Update all four entries
+Set-ItemProperty -Path "HKCR:\Directory\shell\VSCodeWork\command" -Name "(Default)" -Value "`"$correctPath`" --user-data-dir `"C:\vscode\work\data`" `"%1`""
+Set-ItemProperty -Path "HKCR:\Directory\shell\VSCodePersonal\command" -Name "(Default)" -Value "`"$correctPath`" --user-data-dir `"C:\vscode\personal\data`" `"%1`""
+Set-ItemProperty -Path "HKCR:\Directory\Background\shell\VSCodeWork\command" -Name "(Default)" -Value "`"$correctPath`" --user-data-dir `"C:\vscode\work\data`" `"%V`""
+Set-ItemProperty -Path "HKCR:\Directory\Background\shell\VSCodePersonal\command" -Name "(Default)" -Value "`"$correctPath`" --user-data-dir `"C:\vscode\personal\data`" `"%V`""
+```
+
+Or recreate the `.reg` file with the correct path (see the [Adding Context Menu Entries](#adding-context-menu-entries) section).
+
 ### Icons Not Showing
 
 **Check:**
@@ -353,20 +409,7 @@ Then update the registry entries with the correct path.
 
 ### Remove Context Menu Entries
 
-**Create file: `remove-vscode-context-menu.reg`**
-
-```reg
-Windows Registry Editor Version 5.00
-
-[-HKEY_CLASSES_ROOT\Directory\shell\VSCodeWork]
-[-HKEY_CLASSES_ROOT\Directory\shell\VSCodePersonal]
-[-HKEY_CLASSES_ROOT\Directory\Background\shell\VSCodeWork]
-[-HKEY_CLASSES_ROOT\Directory\Background\shell\VSCodePersonal]
-```
-
-Double-click to remove entries.
-
-**Or use PowerShell (as Admin):**
+**Using PowerShell (as Admin):**
 ```powershell
 New-PSDrive -Name HKCR -PSProvider Registry -Root HKEY_CLASSES_ROOT
 Remove-Item -Path "HKCR:\Directory\shell\VSCodeWork" -Recurse -Force
@@ -388,7 +431,7 @@ Simply delete the shortcuts from your desktop.
 
 ---
 
-## File Structure Summary
+## Example File Structure Summary
 
 ```
 C:\vscode\
@@ -428,16 +471,6 @@ C:\vscode\vscode-personal.bat "C:\Projects\PersonalProject"
 
 ---
 
-## Tips & Best Practices
-
-1. **Keep profiles clean**: Only install extensions you need in each profile
-2. **Use descriptive names**: Consider renaming profiles based on your workflow
-3. **Backup configurations**: Copy `C:\vscode\` folder periodically
-4. **SSH Keys**: Consider setting up separate SSH keys for each GitHub account
-5. **Regular updates**: Update VS Code through either profile - it's the same installation
-
----
-
 ## Additional Resources
 
 - [VS Code Profiles Documentation](https://code.visualstudio.com/docs/configure/profiles)
@@ -446,11 +479,8 @@ C:\vscode\vscode-personal.bat "C:\Projects\PersonalProject"
 
 ---
 
-## Version History
+**Note:** This guide assumes VS Code is installed in one of these common locations:
+- User Install: `C:\Users\YOUR_USERNAME\AppData\Local\Programs\Microsoft VS Code\Code.exe`
+- System Install: `C:\Program Files\Microsoft VS Code\Code.exe`
 
-- **v1.0** - Initial setup guide
-- Created: January 2026
-
----
-
-**Note:** This guide assumes VS Code is installed at `C:\Program Files\Microsoft VS Code\Code.exe`. If your installation is elsewhere, adjust paths accordingly.
+If your installation is elsewhere, adjust the paths accordingly. Use `Get-Command code | Select-Object Source` in PowerShell to find your VS Code installation path.
